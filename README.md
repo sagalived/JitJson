@@ -3,6 +3,7 @@
 as dependecias necessarias.
 
 **npm install react**
+
 **npm install react-dom**
 **npm install react-dom**
 **npm install --save-dev @babel/core @babel/preset-env @babel/preset-react babel-loader**
