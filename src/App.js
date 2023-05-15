@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 
 const App = () => {
@@ -16,21 +16,28 @@ const App = () => {
       FALE_CONSULTOR: "¡Hable ahora con nuestro equipo de especialistas en todo Brasil! ¡Para recibir su PRESUPUESTO!"
     }
   });
+  const [idiomaSelecionado, setIdiomaSelecionado] = useState('');
+  const [mostrarTodosIdiomas, setMostrarTodosIdiomas] = useState(true);
+  const [chaveFiltro, setChaveFiltro] = useState('');
 
-  useEffect(() => {
-    gerarLinhasChaves();
-  }, []);
 
-  // Função para gerar as linhas da tabela de chaves
-  const gerarLinhasChaves = () => {
-    return Object.keys(json.Portugues).map((chave) => (
+  const gerarLinhasChaves = useCallback(() => {
+    const chavesFiltradas = Object.keys(json.Portugues).filter(chave =>
+      chave.toLowerCase().includes(chaveFiltro.toLowerCase())
+    );
+  
+    return chavesFiltradas.map((chave) => (
       <tr key={chave}>
         <td>{chave.replace(/_/g, ' ')}</td>
       </tr>
     ));
-  };
+  }, [json.Portugues, chaveFiltro]);
+  
+  useEffect(() => {
+    gerarLinhasChaves();
+  }, [gerarLinhasChaves]);
+  
 
-  // Função para gerar as linhas da tabela de valores de cada idioma
   const gerarLinhasTabela = (idioma, data) => {
     return Object.entries(data).map(([chave, valor]) => (
       <tr key={chave}>
@@ -60,9 +67,13 @@ const App = () => {
     setJson(updatedJson);
   };
 
-  // Função para adicionar uma nova chave em todos os idiomas
   const adicionarChave = () => {
     const novaChave = document.querySelector("#novaChave").value;
+    if (novaChave.trim() === "") {
+      alert("A nova chave não pode ser vazia.");
+      return;
+    }
+
     const updatedJson = { ...json };
 
     Object.keys(updatedJson).forEach((idioma) => {
@@ -72,25 +83,81 @@ const App = () => {
     setJson(updatedJson);
   };
 
-  // Função para adicionar um novo idioma com as chaves padrão
   const adicionarIdioma = () => {
     const novoIdioma = document.querySelector("#novoIdioma").value;
+    if (novoIdioma.trim() === "") {
+      alert("O novo idioma não pode ser vazio.");
+      return;
+    }
+  
     const updatedJson = { ...json };
   
-    updatedJson[novoIdioma] = {
-      TITULO_CONSULTOR: "",
-      FALE_CONSULTOR: "",
-    };
+    const chavesExistentes = Object.keys(updatedJson.Portugues);
+  
+    updatedJson[novoIdioma] = {};
+    chavesExistentes.forEach((chave) => {
+      updatedJson[novoIdioma][chave] = "";
+    });
   
     setJson(updatedJson);
   };
-
-  // Função para salvar e exibir o JSON no console
+  
   const handleSalvar = () => {
     console.log(json);
   };
-
-  // Renderização do componente
+  
+  const handleFiltrarIdioma = (idioma) => {
+    setIdiomaSelecionado(idioma);
+  };
+  
+  const handleMostrarTodosIdiomas = () => {
+    setMostrarTodosIdiomas(true);
+    setIdiomaSelecionado('');
+  };
+  
+  const renderizarIdiomaFiltrado = () => {
+    if (idiomaSelecionado === '' && mostrarTodosIdiomas) {
+      return Object.entries(json).map(([idioma, data]) => (
+        <div className="col-md-4 tabela-container" key={idioma}>
+          <h2>{idioma}</h2>
+          <form>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Chave</th>
+                  <th>Valor</th>
+                </tr>
+              </thead>
+              <tbody>{gerarLinhasTabela(idioma, data)}</tbody>
+            </table>
+          </form>
+        </div>
+      ));
+    } else {
+      const data = json[idiomaSelecionado];
+      return (
+        <div className="col-md-4 tabela-container" key={idiomaSelecionado}>
+          <h2>{idiomaSelecionado}</h2>
+          <form>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Chave</th>
+                  <th>Valor</th>
+                </tr>
+              </thead>
+              <tbody>{gerarLinhasTabela(idiomaSelecionado, data)}</tbody>
+            </table>
+          </form>
+        </div>
+      );
+    }
+  };
+  
+  const handleFiltrarChave = (chave) => {
+    setChaveFiltro(chave);
+  };
+  
   return (
     <div className="container">
       <h1>Formulário de Tradução</h1>
@@ -103,46 +170,94 @@ const App = () => {
               <thead></thead>
               <tbody>{gerarLinhasChaves()}</tbody>
             </table>
-            <input type="text" className="form-control" id="novaChave" placeholder="Nova Chave" />
-            <button type="button" className="btn btn-primary" id="adicionarChave" onClick={adicionarChave}>
+            <input
+              type="text"
+              className="form-control"
+              id="novaChave"
+              placeholder="Nova Chave"
+            />
+            <button
+              type="button"
+              className="btn btn-primary"
+              id="adicionarChave"
+              onClick={adicionarChave}
+            >
               Adicionar Chave
             </button>
           </form>
         </div>
         <div className="col-md-8">
           <div className="row">
-            {Object.entries(json).map(([idioma, data]) => (
-              <div className="col-md-4 tabela-container" key={idioma}>
-                <h2>{idioma}</h2>
-                <form>
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>Chave</th>
-                        <th>Valor</th>
-                      </tr>
-                    </thead>
-                    <tbody>{gerarLinhasTabela(idioma, data)}</tbody>
-                  </table>
-                </form>
-              </div>
-            ))}
+            <div className="col-md-12">
+              <div className="input-group">
+              <input
+                type="text"
+                className="form-control"
+                id="novoIdioma"
+                placeholder="Novo Idioma"
+              />
+              <button
+                type="button"
+                className="btn btn-primary"
+                id="adicionarIdioma"
+                onClick={adicionarIdioma}
+              >
+                Adicionar Idioma
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="row">
+          <div className="col-md-12">
+            <div className="input-group">
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Filtrar por chave..."
+                onChange={(e) => handleFiltrarChave(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+        <div className="row">
+          <div className="col-md-12">
+            <div className="input-group">
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleMostrarTodosIdiomas}
+              >
+                Mostrar Todos os Idiomas
+              </button>
+              {Object.keys(json).map((idioma) => (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  key={idioma}
+                  onClick={() => handleFiltrarIdioma(idioma)}
+                >
+                  {idioma}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="row">{renderizarIdiomaFiltrado()}</div>
+        <div className="row">
+          <div className="col-md-12">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleSalvar}
+            >
+              Salvar
+            </button>
           </div>
         </div>
       </div>
-      <div className="fixed-bottom-right">
-        <input type="text" className="form-control" id="novoIdioma" placeholder="Novo Idioma" />
-        <button type="button" className="btn btn-primary" id="adicionarIdioma" onClick={adicionarIdioma}>
-          Adicionar Novo Idioma
-        </button>
-      </div>
-      <button type="button" className="btn btn-success" id="salvar" onClick={handleSalvar}>
-        Mostrar JSON
-      </button>
     </div>
-  );  
+  </div>
+);
 };
 
 export default App;
-
-            
